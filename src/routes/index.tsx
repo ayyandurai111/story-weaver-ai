@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { ScrollBackground } from "@/components/ScrollBackground";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -123,7 +124,8 @@ const models = ["ChatGPT", "Claude", "Gemini", "Other AI"];
 
 function LandingPage() {
   return (
-    <main className="min-h-screen bg-background font-body text-foreground">
+    <main className="relative min-h-screen font-body text-foreground">
+      <ScrollBackground />
       <Hero />
       <PipelineSection />
       <CapabilitiesSection />
