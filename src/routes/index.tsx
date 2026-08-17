@@ -123,7 +123,8 @@ const models = ["ChatGPT", "Claude", "Gemini", "Other AI"];
 
 function LandingPage() {
   return (
-    <main className="min-h-screen bg-background font-body text-foreground">
+    <main className="relative min-h-screen font-body text-foreground">
+      <ScrollBackground />
       <Hero />
       <PipelineSection />
       <CapabilitiesSection />
