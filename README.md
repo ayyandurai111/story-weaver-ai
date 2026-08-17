@@ -1,14 +1,74 @@
-# Welcome to your Lovable project
+# Story Weaver AI
+
+My project is 
+
+Writer
+
+  │
+
+  ▼
+
+CRM / Content Editor
+
+  │
+
+  ├── Articles
+
+  ├── Blogs
+
+  └── Documentation
+
+  │
+
+  ▼
+
+Chunk Engine
+
+  │
+
+  ▼
+
+Embeddings
+
+  │
+
+  ▼
+
+Vector Database
+
+  │
+
+  ▼
+
+RAG API / MCP Server
+
+  │
+
+  ▼
+
+ChatGPT / Claude / Gemini / Other AI
+
+  │
+
+  ▼
+
+User Answer
+
+
+
+
+
+Write only UI/UX for landing page
 
 This project was built with [Lovable](https://lovable.dev).
 
 ## Build with Lovable
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/dc23802c-bd1b-4cfc-9da2-8dfd21860699).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 
@@ -20,10 +80,3 @@ cd <repository-name>
 npm i
 npm run dev
 ```
-
-## Built with
-
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
