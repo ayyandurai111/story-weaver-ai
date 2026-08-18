@@ -31,7 +31,7 @@ export function ScrollBackground() {
     resize();
 
     const depth = 2400;
-    const count = w < 640 ? 110 : 240;
+    const count = w < 640 ? 60 : 130;
 
     const nodes = Array.from({ length: count }, (_, i) => {
       const a = (i / count) * Math.PI * 2;
@@ -130,7 +130,7 @@ export function ScrollBackground() {
       }
 
       // synapses
-      const maxLinks = reduced ? 900 : 2200;
+      const maxLinks = reduced ? 500 : 1100;
       let drawn = 0;
       for (let i = 0; i < projected.length && drawn < maxLinks; i++) {
         const a = projected[i]!;
@@ -138,7 +138,7 @@ export function ScrollBackground() {
           const b = projected[j]!;
           if (Math.abs(a.z - b.z) > 300) continue;
           const d = Math.hypot(a.x - b.x, a.y - b.y);
-          const threshold = Math.min(w, h) * 0.18 * Math.min(a.scale, b.scale);
+          const threshold = Math.min(w, h) * 0.12 * Math.min(a.scale, b.scale);
           if (d >= threshold) continue;
           const base = (1 - d / threshold) * 0.1 * Math.min(a.scale, b.scale);
           const glow = Math.max(a.intensity, b.intensity) * 0.35 * born;
@@ -169,24 +169,6 @@ export function ScrollBackground() {
           ctx.arc(p.x, p.y, glowR * 2.4, 0, Math.PI * 2);
           ctx.fill();
         }
-      }
-
-      // ring outline appears only once the neurons gather
-      if (gather > 0.02) {
-        const ringScale = fov / (fov + ringZ - cameraZ);
-        ctx.strokeStyle = tint(primary, gather * 0.22);
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.ellipse(
-          cx,
-          cy,
-          Math.min(w, h) * 0.45 * 0.82 * ringScale,
-          Math.min(w, h) * 0.45 * 0.35 * ringScale,
-          0,
-          0,
-          Math.PI * 2,
-        );
-        ctx.stroke();
       }
 
       raf = requestAnimationFrame(draw);
