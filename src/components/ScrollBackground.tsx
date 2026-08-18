@@ -85,28 +85,29 @@ export function ScrollBackground() {
       // retrieval links between near neighbours
       const linkDist = Math.min(w, h) * (0.16 + progress * 0.1);
       for (let i = 0; i < pts.length; i++) {
+        const a = pts[i]!;
         for (let j = i + 1; j < pts.length; j++) {
-          const dx = pts[i].x - pts[j].x;
-          const dy = pts[i].y - pts[j].y;
-          const d = Math.hypot(dx, dy);
+          const b = pts[j]!;
+          const d = Math.hypot(a.x - b.x, a.y - b.y);
           if (d < linkDist) {
             ctx.strokeStyle = stroke((1 - d / linkDist) * 0.1 * (0.4 + progress));
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.moveTo(pts[i].x, pts[i].y);
-            ctx.lineTo(pts[j].x, pts[j].y);
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
             ctx.stroke();
           }
         }
       }
 
       for (let i = 0; i < pts.length; i++) {
-        const p = pts[i];
+        const p = pts[i]!;
         ctx.fillStyle = stroke(p.a);
         ctx.beginPath();
-        ctx.arc(p.x, p.y, nodes[i].r, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, nodes[i]!.r, 0, Math.PI * 2);
         ctx.fill();
       }
+
 
       // query pulse ring at the convergence point
       const cx = w * 0.5;
