@@ -1,9 +1,9 @@
 import { useEffect, useRef } from "react";
 
 /**
- * RAG-themed scroll background: documents on the left dissolve into a
- * vector/embedding constellation that converges toward a retrieval point
- * on the right as the page scrolls.
+ * Deep-space neural network: a 3D field of nodes and synaptic links that the
+ * camera travels through as the page scrolls. Nodes light up when they pass
+ * the retrieval point in the centre of the viewport.
  */
 export function ScrollBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -19,6 +19,7 @@ export function ScrollBackground() {
     let w = 0;
     let h = 0;
     let dpr = 1;
+
     const resize = () => {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
       w = canvas.clientWidth;
@@ -29,25 +30,25 @@ export function ScrollBackground() {
     };
     resize();
 
-    type Node = {
+    type Node3D = {
       x: number;
       y: number;
-      tx: number;
-      ty: number;
+      z: number;
       r: number;
-      speed: number;
       phase: number;
+      speed: number;
     };
 
-    const count = w < 640 ? 34 : 68;
-    const nodes: Node[] = Array.from({ length: count }, () => ({
-      x: Math.random(),
-      y: Math.random(),
-      tx: 0.5 + (Math.random() - 0.5) * 0.28,
-      ty: 0.5 + (Math.random() - 0.5) * 0.36,
-      r: 1 + Math.random() * 2.2,
-      speed: 0.4 + Math.random() * 0.8,
+    const depth = 2400;
+    const count = w < 640 ? 120 : 260;
+
+    const nodes: Node3D[] = Array.from({ length: count }, () => ({
+      x: (Math.random() - 0.5) * 2.2,
+      y: (Math.random() - 0.5) * 1.6,
+      z: Math.random() * depth,
+      r: 1.2 + Math.random() * 2.4,
       phase: Math.random() * Math.PI * 2,
+      speed: 0.3 + Math.random() * 0.7,
     }));
 
     let progress = 0;
@@ -61,63 +62,113 @@ export function ScrollBackground() {
 
     const css = getComputedStyle(document.documentElement);
     const ink = css.getPropertyValue("--foreground").trim() || "0 0% 20%";
-    const stroke = (a: number) => `color-mix(in oklab, hsl(${ink}) ${a * 100}%, transparent)`;
+    const primary = css.getPropertyValue("--primary").trim() || "0 0% 50%";
+
+    const stroke = (color: string, a: number) =>
+      `color-mix(in oklab, hsl(${color}) ${a * 100}%, transparent)`;
+
+    const fov = 600;
+
+    const project = (x: number, y: number, z: number, cameraZ: number) => {
+      const scale = fov / (fov + z - cameraZ);
+      return {
+        x: w * 0.5 + x * scale * Math.min(w, h) * 0.45,
+        y: h * 0.5 + y * scale * Math.min(w, h) * 0.45,
+        scale,
+        visible: scale > 0,
+      };
+    };
 
     let raf = 0;
     let t = 0;
 
     const draw = () => {
-      t += 0.006;
-      progress += (target - progress) * 0.08;
+      t += 0.005;
+      progress += (target - progress) * 0.06;
+
+      const cameraZ = progress * (depth + fov * 0.6) - fov * 0.3;
+      const rotation = progress * Math.PI * 0.35;
+
       ctx.clearRect(0, 0, w, h);
 
-      const pts: Array<{ x: number; y: number; a: number }> = [];
+      const projected: Array<{ x: number; y: number; scale: number; z: number; intensity: number; i: number }> = [];
 
-      for (const n of nodes) {
-        const drift = reduced ? 0 : Math.sin(t * n.speed + n.phase) * 0.012;
-        const e = Math.min(1, Math.max(0, progress * 1.25));
-        const ease = e * e * (3 - 2 * e);
-        const x = (n.x + (n.tx - n.x) * ease + drift) * w;
-        const y = (n.y + (n.ty - n.y) * ease + drift * 0.6) * h;
-        pts.push({ x, y, a: 0.18 + ease * 0.22 });
+      const retrievalZ = cameraZ + fov * 0.4;
+      const cx = w * 0.5;
+      const cy = h * 0.5;
+
+      for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i]!;
+        const drift = reduced ? 0 : Math.sin(t * n.speed + n.phase) * 0.008;
+
+        const cos = Math.cos(rotation);
+        const sin = Math.sin(rotation);
+        const rx = n.x * cos - n.z * sin;
+        const rz = n.z * cos + n.x * sin;
+
+        const p = project(rx + drift, n.y + drift, rz, cameraZ);
+        if (!p.visible) continue;
+
+        const distToRetrieval = Math.abs(rz - retrievalZ);
+        const centerDist = Math.hypot(p.x - cx, p.y - cy) / Math.min(w, h);
+        const intensity = Math.max(0, 1 - distToRetrieval / 340) * Math.max(0, 1 - centerDist * 2.2);
+
+        projected.push({ x: p.x, y: p.y, scale: p.scale, z: rz, intensity, i });
       }
 
-      // retrieval links between near neighbours
-      const linkDist = Math.min(w, h) * (0.16 + progress * 0.1);
-      for (let i = 0; i < pts.length; i++) {
-        const a = pts[i]!;
-        for (let j = i + 1; j < pts.length; j++) {
-          const b = pts[j]!;
+      // Draw links between nearby nodes in 3D space.
+      const linkCount = projected.length;
+      const maxLinks = reduced ? 1200 : 2600;
+      let linksDrawn = 0;
+      for (let i = 0; i < linkCount && linksDrawn < maxLinks; i++) {
+        const a = projected[i]!;
+        for (let j = i + 1; j < linkCount && linksDrawn < maxLinks; j++) {
+          const b = projected[j]!;
+          const dz = Math.abs(a.z - b.z);
+          if (dz > 260) continue;
           const d = Math.hypot(a.x - b.x, a.y - b.y);
-          if (d < linkDist) {
-            ctx.strokeStyle = stroke((1 - d / linkDist) * 0.1 * (0.4 + progress));
-            ctx.lineWidth = 1;
+          const threshold = Math.min(w, h) * 0.18 * Math.min(a.scale, b.scale);
+          if (d < threshold) {
+            const baseAlpha = (1 - d / threshold) * 0.12 * Math.min(a.scale, b.scale);
+            const glow = Math.max(a.intensity, b.intensity) * 0.45;
+            ctx.strokeStyle = stroke(ink, baseAlpha + glow);
+            ctx.lineWidth = Math.max(0.5, 1.2 * Math.min(a.scale, b.scale));
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
             ctx.stroke();
+            linksDrawn++;
           }
         }
       }
 
-      for (let i = 0; i < pts.length; i++) {
-        const p = pts[i]!;
-        ctx.fillStyle = stroke(p.a);
+      // Draw nodes.
+      for (const p of projected) {
+        const baseR = p.scale * nodes[p.i]!.r;
+        const glowR = baseR * (1 + p.intensity * 1.8);
+        const alpha = Math.min(0.9, 0.18 + p.intensity * 0.7) * Math.min(1, p.scale * 1.2);
+
+        ctx.fillStyle = stroke(p.intensity > 0.35 ? primary : ink, alpha);
         ctx.beginPath();
-        ctx.arc(p.x, p.y, nodes[i]!.r, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, glowR, 0, Math.PI * 2);
         ctx.fill();
+
+        if (p.intensity > 0.15) {
+          ctx.fillStyle = stroke(primary, p.intensity * 0.35);
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, glowR * 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
 
-
-      // retrieval ring: radius follows scroll position only (no idle pulsing)
-      const cx = w * 0.5;
-      const cy = h * 0.5;
-      ctx.strokeStyle = stroke(0.1);
+      // Retrieval ring marking the active plane.
+      const ringScale = fov / (fov + retrievalZ - cameraZ);
+      const ringRadius = Math.min(w, h) * 0.18 * ringScale;
+      ctx.strokeStyle = stroke(primary, 0.08 + progress * 0.12);
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.arc(cx, cy, (0.12 + progress * 0.3) * Math.min(w, h), 0, Math.PI * 2);
+      ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
       ctx.stroke();
-
 
       raf = requestAnimationFrame(draw);
     };
@@ -135,7 +186,7 @@ export function ScrollBackground() {
   return (
     <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-secondary/40" />
-      <canvas ref={canvasRef} className="absolute inset-0 size-full opacity-70" />
+      <canvas ref={canvasRef} className="absolute inset-0 size-full opacity-80" />
       <div className="absolute left-1/2 top-1/2 size-[55vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl" />
     </div>
   );
