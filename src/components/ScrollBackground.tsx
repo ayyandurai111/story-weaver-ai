@@ -1,83 +1,141 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Fixed 3D perspective background: a receding grid plane plus floating
- * depth cards that rotate and translate as the page scrolls.
+ * RAG-themed scroll background: documents on the left dissolve into a
+ * vector/embedding constellation that converges toward a retrieval point
+ * on the right as the page scrolls.
  */
 export function ScrollBackground() {
-  const sceneRef = useRef<HTMLDivElement>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
-  const shapesRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (media.matches) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-    let frame = 0;
-    const update = () => {
-      frame = 0;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    let w = 0;
+    let h = 0;
+    let dpr = 1;
+    const resize = () => {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = canvas.clientWidth;
+      h = canvas.clientHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    resize();
+
+    type Node = {
+      x: number;
+      y: number;
+      tx: number;
+      ty: number;
+      r: number;
+      speed: number;
+      phase: number;
+    };
+
+    const count = w < 640 ? 34 : 68;
+    const nodes: Node[] = Array.from({ length: count }, () => ({
+      x: Math.random(),
+      y: Math.random(),
+      tx: 0.5 + (Math.random() - 0.5) * 0.28,
+      ty: 0.5 + (Math.random() - 0.5) * 0.36,
+      r: 1 + Math.random() * 2.2,
+      speed: 0.4 + Math.random() * 0.8,
+      phase: Math.random() * Math.PI * 2,
+    }));
+
+    let progress = 0;
+    let target = 0;
+    const readScroll = () => {
       const max = document.documentElement.scrollHeight - window.innerHeight;
-      const p = max > 0 ? window.scrollY / max : 0;
+      target = max > 0 ? window.scrollY / max : 0;
+    };
+    readScroll();
+    progress = target;
 
-      if (gridRef.current) {
-        gridRef.current.style.transform = `rotateX(72deg) translate3d(0, ${p * 1200}px, 0)`;
+    const css = getComputedStyle(document.documentElement);
+    const ink = css.getPropertyValue("--foreground").trim() || "0 0% 20%";
+    const stroke = (a: number) => `color-mix(in oklab, hsl(${ink}) ${a * 100}%, transparent)`;
+
+    let raf = 0;
+    let t = 0;
+
+    const draw = () => {
+      t += 0.006;
+      progress += (target - progress) * 0.08;
+      ctx.clearRect(0, 0, w, h);
+
+      const pts: Array<{ x: number; y: number; a: number }> = [];
+
+      for (const n of nodes) {
+        const drift = reduced ? 0 : Math.sin(t * n.speed + n.phase) * 0.012;
+        const e = Math.min(1, Math.max(0, progress * 1.25));
+        const ease = e * e * (3 - 2 * e);
+        const x = (n.x + (n.tx - n.x) * ease + drift) * w;
+        const y = (n.y + (n.ty - n.y) * ease + drift * 0.6) * h;
+        pts.push({ x, y, a: 0.18 + ease * 0.22 });
       }
-      if (shapesRef.current) {
-        shapesRef.current.style.transform = `translate3d(0, ${-p * 240}px, ${p * 420}px) rotateX(${p * 24}deg) rotateY(${p * 36}deg)`;
+
+      // retrieval links between near neighbours
+      const linkDist = Math.min(w, h) * (0.16 + progress * 0.1);
+      for (let i = 0; i < pts.length; i++) {
+        for (let j = i + 1; j < pts.length; j++) {
+          const dx = pts[i].x - pts[j].x;
+          const dy = pts[i].y - pts[j].y;
+          const d = Math.hypot(dx, dy);
+          if (d < linkDist) {
+            ctx.strokeStyle = stroke((1 - d / linkDist) * 0.1 * (0.4 + progress));
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(pts[i].x, pts[i].y);
+            ctx.lineTo(pts[j].x, pts[j].y);
+            ctx.stroke();
+          }
+        }
       }
-      if (sceneRef.current) {
-        sceneRef.current.style.opacity = String(0.55 + p * 0.25);
+
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i];
+        ctx.fillStyle = stroke(p.a);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, nodes[i].r, 0, Math.PI * 2);
+        ctx.fill();
       }
+
+      // query pulse ring at the convergence point
+      const cx = w * 0.5;
+      const cy = h * 0.5;
+      const pulse = (t * 0.35) % 1;
+      ctx.strokeStyle = stroke(0.14 * (1 - pulse));
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, pulse * Math.min(w, h) * 0.42, 0, Math.PI * 2);
+      ctx.stroke();
+
+      raf = requestAnimationFrame(draw);
     };
 
-    const onScroll = () => {
-      if (!frame) frame = requestAnimationFrame(update);
-    };
-
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
+    draw();
+    window.addEventListener("scroll", readScroll, { passive: true });
+    window.addEventListener("resize", resize);
     return () => {
-      if (frame) cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
+      cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", readScroll);
+      window.removeEventListener("resize", resize);
     };
   }, []);
 
   return (
-    <div
-      ref={sceneRef}
-      aria-hidden="true"
-      className="pointer-events-none fixed inset-0 -z-10 overflow-hidden [perspective:900px]"
-    >
+    <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-secondary/40" />
-
-      {/* Receding grid plane */}
-      <div
-        ref={gridRef}
-        className="absolute left-1/2 top-1/2 h-[220vh] w-[300vw] -translate-x-1/2 origin-top will-change-transform opacity-40"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, var(--color-border) 1px, transparent 1px), linear-gradient(to bottom, var(--color-border) 1px, transparent 1px)",
-          backgroundSize: "80px 80px",
-          maskImage: "linear-gradient(to bottom, transparent, black 30%, transparent 85%)",
-          WebkitMaskImage: "linear-gradient(to bottom, transparent, black 30%, transparent 85%)",
-        }}
-      />
-
-      {/* Floating depth shapes */}
-      <div
-        ref={shapesRef}
-        className="absolute inset-0 [transform-style:preserve-3d] will-change-transform"
-      >
-        <div className="absolute left-[8%] top-[18%] size-40 rounded-3xl border border-primary/20 bg-primary/5 [transform:translateZ(-160px)_rotate(12deg)]" />
-        <div className="absolute right-[10%] top-[30%] size-56 rounded-full border border-muted-foreground/20 bg-muted/30 [transform:translateZ(-320px)]" />
-        <div className="absolute left-[20%] bottom-[16%] size-32 rounded-2xl border border-accent/25 bg-accent/5 [transform:translateZ(-80px)_rotate(-18deg)]" />
-        <div className="absolute right-[22%] bottom-[24%] size-24 rounded-xl border border-primary/20 bg-card/60 [transform:translateZ(-40px)_rotate(24deg)]" />
-      </div>
-
-      {/* Soft glow */}
-      <div className="absolute left-1/2 top-1/3 size-[60vw] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+      <canvas ref={canvasRef} className="absolute inset-0 size-full opacity-70" />
+      <div className="absolute left-1/2 top-1/2 size-[55vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl" />
     </div>
   );
 }
