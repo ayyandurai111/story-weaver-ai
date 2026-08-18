@@ -109,15 +109,15 @@ export function ScrollBackground() {
       }
 
 
-      // query pulse ring at the convergence point
+      // retrieval ring: radius follows scroll position only (no idle pulsing)
       const cx = w * 0.5;
       const cy = h * 0.5;
-      const pulse = (t * 0.35) % 1;
-      ctx.strokeStyle = stroke(0.14 * (1 - pulse));
+      ctx.strokeStyle = stroke(0.1);
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.arc(cx, cy, pulse * Math.min(w, h) * 0.42, 0, Math.PI * 2);
+      ctx.arc(cx, cy, (0.12 + progress * 0.3) * Math.min(w, h), 0, Math.PI * 2);
       ctx.stroke();
+
 
       raf = requestAnimationFrame(draw);
     };
