@@ -169,14 +169,17 @@ export function ScrollBackground() {
           ctx.save();
           ctx.translate(x, y);
           ctx.rotate(Math.sin(d * 1.7) * 0.06);
-          ctx.strokeStyle = rgba(cyan, 0.5 * docAlpha);
+          ctx.strokeStyle = rgba(cyan, 0.95 * docAlpha);
+          ctx.shadowBlur = 18;
+          ctx.shadowColor = rgba(cyan, 0.5 * docAlpha);
           ctx.fillStyle = rgba(cyan, 0.05 * docAlpha);
           ctx.lineWidth = 1.2;
           ctx.beginPath();
           ctx.roundRect(-pw / 2, -ph / 2, pw, ph, 6);
           ctx.fill();
           ctx.stroke();
-          ctx.strokeStyle = rgba(ink, 0.22 * docAlpha);
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = rgba(ink, 0.4 * docAlpha);
           for (let l = 0; l < 5; l++) {
             const ly = -ph / 2 + 14 + l * (ph - 24) / 5;
             ctx.beginPath();
@@ -210,7 +213,7 @@ export function ScrollBackground() {
       // ---------- chunk squares (between split and embed) ----------
       const chunkAlpha = split * (1 - embed);
       if (chunkAlpha > 0.01) {
-        ctx.strokeStyle = rgba(cyan, 0.45 * chunkAlpha);
+        ctx.strokeStyle = rgba(cyan, 0.85 * chunkAlpha);
         ctx.lineWidth = 1;
         for (const pt of pts) {
           const sz = S * 0.026 * (1 - embed * 0.6);
