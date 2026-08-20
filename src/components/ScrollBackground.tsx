@@ -59,7 +59,7 @@ export function ScrollBackground() {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const cyan = readColor("--primary", "rgb(34, 211, 238)");
-    const violet = readColor("--accent", "rgb(124, 92, 255)");
+    const violet = readColor("--chart-4", "rgb(167, 139, 250)");
     const ink = readColor("--foreground", "rgb(232, 244, 255)");
 
     let w = 0;
@@ -104,7 +104,7 @@ export function ScrollBackground() {
           netY: Math.sin(a) * rr * 0.72 + (rnd() - 0.5) * 0.1,
           relevant: rnd() < 0.22,
           seed: rnd() * Math.PI * 2,
-          size: 1.6 + rnd() * 1.8,
+          size: 2.2 + rnd() * 2.2,
         });
       }
     }
@@ -225,8 +225,8 @@ export function ScrollBackground() {
             if (dist > threshold) continue;
             const hot = a.n.relevant && b.n.relevant ? retrieve : 0;
             const strength = (1 - dist / threshold) * linkAlpha;
-            ctx.strokeStyle = hot > 0.05 ? rgba(cyan, strength * (0.2 + hot * 0.8)) : rgba(violet, strength * 0.18);
-            ctx.lineWidth = hot > 0.05 ? 1.2 : 0.7;
+            ctx.strokeStyle = hot > 0.05 ? rgba(cyan, strength * (0.45 + hot)) : rgba(violet, strength * 0.5);
+            ctx.lineWidth = hot > 0.05 ? 1.6 : 1;
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
@@ -241,11 +241,11 @@ export function ScrollBackground() {
         for (const pt of pts) {
           const hot = pt.n.relevant ? retrieve : 0;
           const pulse = reduced ? 0 : (Math.sin(t * 2 + pt.n.seed) + 1) * 0.5;
-          const r = pt.n.size * (1 + hot * 1.5) * (0.7 + pulse * 0.3);
+          const r = pt.n.size * 1.6 * (1 + hot * 1.4) * (0.8 + pulse * 0.25);
           const color = hot > 0.05 ? cyan : violet;
-          ctx.fillStyle = rgba(color, nodeAlpha * (0.35 + hot * 0.6));
-          ctx.shadowBlur = 12 * (0.4 + hot);
-          ctx.shadowColor = rgba(color, nodeAlpha * 0.8);
+          ctx.fillStyle = rgba(color, nodeAlpha * (0.85 + hot * 0.15));
+          ctx.shadowBlur = 18 * (0.6 + hot);
+          ctx.shadowColor = rgba(color, nodeAlpha);
           ctx.beginPath();
           ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
           ctx.fill();
