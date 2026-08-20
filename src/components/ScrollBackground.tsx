@@ -37,7 +37,16 @@ function readColor(varName: string, fallback: string) {
   document.body.appendChild(el);
   const c = getComputedStyle(el).color;
   el.remove();
-  return c || fallback;
+  // normalize any color space (oklch, hsl, ...) to rgb via a 1x1 canvas
+  const probe = document.createElement("canvas");
+  probe.width = 1;
+  probe.height = 1;
+  const pctx = probe.getContext("2d", { willReadFrequently: true });
+  if (!pctx) return fallback;
+  pctx.fillStyle = c || fallback;
+  pctx.fillRect(0, 0, 1, 1);
+  const d = pctx.getImageData(0, 0, 1, 1).data;
+  return `rgb(${d[0]}, ${d[1]}, ${d[2]})`;
 }
 
 function rgba(color: string, alpha: number) {
