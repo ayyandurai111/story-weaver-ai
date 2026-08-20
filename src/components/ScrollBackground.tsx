@@ -380,7 +380,6 @@ export function ScrollBackground() {
     <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-background">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,color-mix(in_oklab,var(--primary)_14%,transparent),transparent_60%)]" />
       <canvas ref={canvasRef} className="absolute inset-0 size-full" />
-      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent,color-mix(in_oklab,var(--background)_70%,transparent))]" />
     </div>
   );
 }
